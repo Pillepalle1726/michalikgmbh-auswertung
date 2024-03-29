@@ -8,7 +8,7 @@ def process_file(uploaded_file, interval: int):
     # Get the file name and determine the file extension
     file_name = uploaded_file.name
     if file_name.endswith('.csv'):
-        df = pd.read_csv(uploaded_file, sep=';', decimal=',', skiprows=2)
+        df = pd.read_csv(uploaded_file, sep=';', decimal=',', skiprows=2, encoding='latin1')
     elif file_name.endswith('.xlsx'):
         df = pd.read_excel(uploaded_file, skiprows=2)
     else:
