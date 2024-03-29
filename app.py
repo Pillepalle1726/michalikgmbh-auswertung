@@ -2,6 +2,8 @@ import streamlit as st
 from process_file_ import process_file
 import pandas as pd
 from io import BytesIO
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 
 st.title('Michalik GmbH - Datenanalyse')
@@ -14,26 +16,24 @@ def to_excel(df):
         df.to_excel(writer, sheet_name='Sheet1')
     return output.getvalue()
 
-
 def to_csv(df):
-    return df.to_csv(index=False).encode('utf-8')  # Consider setting index=False here as well
+    return df.to_csv(index=False, sep=';', decimal=',').encode('utf-8')
+
+# Initialize a session state to store the processed DataFrame
+if 'processed_df' not in st.session_state:
+    st.session_state.processed_df = None
 
 if uploaded_file is not None:
-    # Process file based on the selected interval
-    # interval = st.selectbox('Interval auswählen:', ['1s', '2s', '5s', ])
     interval = st.number_input('Interval in Sekunden', min_value=1, max_value=60, value=1)
     if st.button('Datei bearbeiten'):
-        processed_df = process_file(uploaded_file, interval)
+        # Process the file and store the result in the session state
+        st.session_state.processed_df = process_file(uploaded_file, interval)
+        st.write(st.session_state.processed_df)
 
-        # Show processed DataFrame (you might want to show only a part of it or just confirm it's processed)
-        st.write(processed_df)
-
-        # Convert DataFrame to Excel and CSV
-        excel_data = to_excel(processed_df)
-        csv_data = to_csv(processed_df)
-        csv_filename = uploaded_file.name.replace('.csv', '_processed.csv')
-        xlsx_filename = uploaded_file.name.replace('.csv', '_processed.xlsx')
-        print(xlsx_filename)
+        excel_data = to_excel(st.session_state.processed_df)
+        csv_data = to_csv(st.session_state.processed_df)
+        csv_filename = uploaded_file.name.replace('.csv', '_processed.csv').replace('.xlsx', '_processed.csv')
+        xlsx_filename = uploaded_file.name.replace('.csv', '_processed.xlsx').replace('.xlsx', '_processed.xlsx')
         # Excel Download Button
         st.download_button(
             label="Download Excel",
@@ -49,3 +49,34 @@ if uploaded_file is not None:
             file_name=csv_filename,
             mime="text/csv"
         )
+
+if 'viz_clicked' not in st.session_state:
+    st.session_state.viz_clicked = False
+
+if st.session_state.processed_df is not None and len(st.session_state.processed_df) > 0:
+    if st.button('Visualisierung erstellen'):
+        # Set the state to indicate that the button has been clicked
+        st.session_state.viz_clicked = True
+
+    # Check if the visualization button has been clicked to show the multiselect
+    if st.session_state.viz_clicked:
+        selected_columns = st.multiselect('Wähle die Spalten für die Visualisierung:', st.session_state.processed_df.columns)
+        
+        # Proceed with visualization if columns are selected
+        if selected_columns:
+            # Check if the DataFrame has a DateTime index
+            if isinstance(st.session_state.processed_df.index, pd.DatetimeIndex):
+                # Use the index directly for plotting
+                times = st.session_state.processed_df.index.time
+                # Convert times to matplotlib format
+                mdates_times = [mdates.date2num(pd.to_datetime(t.strftime('%H:%M:%S'))) for t in times]
+                fig, ax = plt.subplots()
+                for col in selected_columns:
+                    ax.plot(mdates_times, st.session_state.processed_df[col], label=col)
+                ax.legend()
+                # Use DateFormatter to format the x-axis labels to display only the time in HH:MM:SS format
+                ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+                plt.xticks(rotation=45)  # Rotate x-axis labels if needed
+                st.pyplot(fig)
+            else:
+                st.error("Der DataFrame hat keinen DateTime-Index.")
