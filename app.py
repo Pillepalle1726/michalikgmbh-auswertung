@@ -20,8 +20,8 @@ def to_csv(df):
 
 if uploaded_file is not None:
     # Process file based on the selected interval
-    interval = st.selectbox('Interval auswählen:', ['1s', '2s', '4s'])
-
+    # interval = st.selectbox('Interval auswählen:', ['1s', '2s', '5s', ])
+    interval = st.number_input('Interval in Sekunden', min_value=1, max_value=60, value=1)
     if st.button('Datei bearbeiten'):
         processed_df = process_file(uploaded_file, interval)
 

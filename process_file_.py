@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 
 
-def process_file(uploaded_file, interval):
+def process_file(uploaded_file, interval: int):
+
+    interval = f'{interval}s'
     # Get the file name and determine the file extension
     file_name = uploaded_file.name
     if file_name.endswith('.csv'):
